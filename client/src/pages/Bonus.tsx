@@ -6,13 +6,21 @@ import ProductCard from '../components/Product/ProductCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { AHProduct } from '../types';
 
+interface ProductSearchResult {
+  products: AHProduct[];
+  page: { totalElements: number; totalPages: number; number: number; size: number };
+}
+
+const PAGE_SIZE = 50;
+
 export default function Bonus() {
   const qc = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['products-bonus'],
-    queryFn: () => productsApi.getBonus(0, 80),
+  const { data, isLoading, error } = useQuery<ProductSearchResult>({
+    queryKey: ['products-bonus', page],
+    queryFn: () => productsApi.getBonus(page, PAGE_SIZE),
     staleTime: 5 * 60_000,
   });
 
@@ -27,7 +35,6 @@ export default function Bonus() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['lists'] }),
   });
 
-  // Extract categories from bonus products only
   const categories = useMemo(() => {
     if (!data?.products) return [];
     const cats = new Map<string, number>();
@@ -40,8 +47,10 @@ export default function Bonus() {
   const filtered = useMemo(() => {
     if (!data?.products) return [];
     if (!selectedCategory) return data.products;
-    return data.products.filter((p) => p.category === selectedCategory);
+    return data.products.filter((p: AHProduct) => p.category === selectedCategory);
   }, [data?.products, selectedCategory]);
+
+  const totalPages = data ? Math.ceil(data.page.totalElements / PAGE_SIZE) : 0;
 
   return (
     <div>
@@ -67,13 +76,15 @@ export default function Bonus() {
         </div>
       ) : (
         <>
-          {/* Stats & category filters */}
+          {/* Stats */}
           <div className="mb-4">
             <p className="text-sm text-gray-500 mb-3">
-              {data.page.totalElements} aanbiedingen deze week
+              {data.page.totalElements.toLocaleString('nl')} aanbiedingen deze week
               {selectedCategory && ` · ${filtered.length} in "${selectedCategory}"`}
+              {' · '}pagina {page + 1} van {totalPages}
             </p>
 
+            {/* Category filters */}
             {categories.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 <button
@@ -84,7 +95,7 @@ export default function Bonus() {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  Alle categorieën
+                  Alle categorieën ({data.products.length})
                 </button>
                 {categories.map(({ cat, count }) => (
                   <button
@@ -103,8 +114,9 @@ export default function Bonus() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filtered.map((product) => (
+          {/* Products grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+            {filtered.map((product: AHProduct) => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -113,6 +125,29 @@ export default function Bonus() {
               />
             ))}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && !selectedCategory && (
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => { setPage((p) => p - 1); setSelectedCategory(null); window.scrollTo(0, 0); }}
+                disabled={page === 0}
+                className="btn-secondary disabled:opacity-40"
+              >
+                ← Vorige
+              </button>
+              <span className="text-sm text-gray-600">
+                {page + 1} / {totalPages}
+              </span>
+              <button
+                onClick={() => { setPage((p) => p + 1); setSelectedCategory(null); window.scrollTo(0, 0); }}
+                disabled={page >= totalPages - 1}
+                className="btn-secondary disabled:opacity-40"
+              >
+                Volgende →
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

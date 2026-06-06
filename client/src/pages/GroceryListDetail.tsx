@@ -4,7 +4,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listsApi } from '../api/lists';
 import { useAuthStore } from '../store/authStore';
 import GroceryListItemRow from '../components/GroceryList/GroceryListItem';
+import ProductAutocomplete from '../components/GroceryList/ProductAutocomplete';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import { AHProduct } from '../types';
 
 export default function GroceryListDetail() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +17,7 @@ export default function GroceryListDetail() {
   const [newItem, setNewItem] = useState('');
   const [qty, setQty] = useState('1');
   const [unit, setUnit] = useState('');
+  const [selectedProductId, setSelectedProductId] = useState<number | undefined>();
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
   const [copySourceId, setCopySourceId] = useState<number | ''>('');
@@ -33,13 +36,14 @@ export default function GroceryListDetail() {
   const otherLists = allLists.filter((l) => l.id !== listId);
 
   const addItemMutation = useMutation({
-    mutationFn: (item: { name: string; quantity: number; unit?: string }) =>
+    mutationFn: (item: { name: string; quantity: number; unit?: string; ah_product_id?: number }) =>
       listsApi.addItem(listId, item),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['lists', listId] });
       setNewItem('');
       setQty('1');
       setUnit('');
+      setSelectedProductId(undefined);
     },
   });
 
@@ -71,8 +75,18 @@ export default function GroceryListDetail() {
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (newItem.trim()) {
-      addItemMutation.mutate({ name: newItem.trim(), quantity: parseFloat(qty) || 1, unit: unit.trim() || undefined });
+      addItemMutation.mutate({
+        name: newItem.trim(),
+        quantity: parseFloat(qty) || 1,
+        unit: unit.trim() || undefined,
+        ah_product_id: selectedProductId,
+      });
     }
+  };
+
+  const handleProductSelect = (name: string, product?: AHProduct) => {
+    setNewItem(name);
+    setSelectedProductId(product?.id);
   };
 
   const handleSync = async () => {
@@ -139,11 +153,11 @@ export default function GroceryListDetail() {
       <form onSubmit={handleAddItem} className="card p-4 mb-4 flex flex-col gap-3">
         <h2 className="font-semibold text-gray-700 text-sm">Item toevoegen</h2>
         <div className="flex gap-2">
-          <input
-            className="input flex-1"
-            placeholder="Productnaam"
+          <ProductAutocomplete
             value={newItem}
-            onChange={(e) => setNewItem(e.target.value)}
+            onChange={handleProductSelect}
+            placeholder="Zoek product of typ naam..."
+            className="input w-full"
           />
           <input
             className="input w-16 text-center"

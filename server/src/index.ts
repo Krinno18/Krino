@@ -9,6 +9,7 @@ import listRoutes from './routes/lists.js';
 import axios from 'axios';
 import { getAnonymousToken } from './services/ahAuth.js';
 import { debugAllerhandeNextData } from './services/ahRecipes.js';
+import { debugRawBonusProduct } from './services/ahProducts.js';
 import './db/database.js';
 
 const app = express();
@@ -170,6 +171,15 @@ app.get('/api/debug/ah-token', async (_, res) => {
       ahStatus: err.response?.status,
       ahData: err.response?.data,
     });
+  }
+});
+
+app.get('/api/debug/ah-bonus-raw', async (_, res) => {
+  try {
+    const data = await debugRawBonusProduct();
+    res.json(data);
+  } catch (err: any) {
+    res.json({ error: err.message, status: err.response?.status });
   }
 });
 
