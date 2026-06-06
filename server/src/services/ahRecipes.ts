@@ -9,8 +9,12 @@ interface RecipeSearchResponse {
   total: number;
 }
 
-function authHeader(token: string) {
-  return { Authorization: `Bearer ${token}` };
+function ahHeaders(token: string) {
+  return {
+    Authorization: `Bearer ${token}`,
+    'User-Agent': 'Appie/8.22.3',
+    'X-Application': 'AHWEBSHOP',
+  };
 }
 
 export async function searchRecipes(
@@ -22,7 +26,7 @@ export async function searchRecipes(
 
   const response = await axios.get(`${BASE_URL}/gatekeeper/recipe/v1/recipe-suggestions`, {
     params: { query, size },
-    headers: authHeader(token),
+    headers: ahHeaders(token),
   });
 
   const recipes: AHRecipe[] = (response.data.recipes ?? []).map((r: any) => ({
@@ -49,7 +53,7 @@ export async function getRecipe(recipeId: string, userToken?: string): Promise<A
   const token = userToken || (await getAnonymousToken());
 
   const response = await axios.get(`${BASE_URL}/gatekeeper/recipe/v1/recipes/${recipeId}`, {
-    headers: authHeader(token),
+    headers: ahHeaders(token),
   });
 
   const r = response.data;

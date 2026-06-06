@@ -14,8 +14,12 @@ interface ProductSearchResponse {
   };
 }
 
-function authHeader(token: string) {
-  return { Authorization: `Bearer ${token}` };
+function ahHeaders(token: string) {
+  return {
+    Authorization: `Bearer ${token}`,
+    'User-Agent': 'Appie/8.22.3',
+    'X-Application': 'AHWEBSHOP',
+  };
 }
 
 export async function searchProducts(
@@ -28,7 +32,7 @@ export async function searchProducts(
 
   const response = await axios.get(`${BASE_URL}/mobile-services/product/search/v2`, {
     params: { query, page, size },
-    headers: authHeader(token),
+    headers: ahHeaders(token),
   });
 
   return {
@@ -42,7 +46,7 @@ export async function getProduct(productId: number, userToken?: string): Promise
 
   const response = await axios.get(
     `${BASE_URL}/mobile-services/product/detail/v4/fir/${productId}`,
-    { headers: authHeader(token) }
+    { headers: ahHeaders(token) }
   );
 
   return response.data.productCard;
