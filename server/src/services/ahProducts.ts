@@ -94,10 +94,11 @@ export async function searchProducts(query: string, page = 0, size = 20, userTok
   return fetchProducts({ query, page, size }, userToken, false);
 }
 
-export async function getBonusProducts(page = 0, size = 50, userToken?: string) {
-  const result = await fetchProducts({ bonus: true, page, size }, userToken, true);
+export async function getBonusProducts(page = 0, size = 50, userToken?: string, query?: string) {
+  const params: Record<string, any> = { bonus: true, page, size };
+  if (query?.trim()) params.query = query.trim();
+  const result = await fetchProducts(params, userToken, true);
   // Filter to products with a visible deal (discount label or price difference)
-  // This removes generic "Prijsfavoriet" items without real weekly bonus deals
   const withDeal = result.products.filter(
     (p) => p.discountLabel || (p.price?.was !== undefined)
   );

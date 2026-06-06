@@ -26,10 +26,10 @@ router.get('/search', async (req: Request, res: Response) => {
 });
 
 router.get('/bonus', async (req: Request, res: Response) => {
-  const { page = '0', size = '20' } = req.query;
+  const { page = '0', size = '50', q } = req.query;
   try {
     const userToken = req.session.ahTokens?.access_token;
-    const result = await getBonusProducts(Number(page), Number(size), userToken);
+    const result = await getBonusProducts(Number(page), Number(size), userToken, q as string | undefined);
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: 'Bonus producten ophalen mislukt', detail: err.message });

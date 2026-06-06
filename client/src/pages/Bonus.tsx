@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsApi } from '../api/products';
 import { listsApi } from '../api/lists';
 import ProductCard from '../components/Product/ProductCard';
+import SearchBar from '../components/common/SearchBar';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { AHProduct } from '../types';
 
@@ -17,10 +18,11 @@ export default function Bonus() {
   const qc = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data, isLoading, error } = useQuery<ProductSearchResult>({
-    queryKey: ['products-bonus', page],
-    queryFn: () => productsApi.getBonus(page, PAGE_SIZE),
+    queryKey: ['products-bonus', page, searchQuery],
+    queryFn: () => productsApi.getBonus(page, PAGE_SIZE, searchQuery || undefined),
     staleTime: 5 * 60_000,
   });
 
@@ -61,6 +63,18 @@ export default function Bonus() {
 
   const totalPages = data ? Math.ceil(data.page.totalElements / PAGE_SIZE) : 0;
 
+  const handleSearch = (q: string) => {
+    setSearchQuery(q);
+    setPage(0);
+    setSelectedCategory(null);
+  };
+
+  const handleClear = () => {
+    setSearchQuery('');
+    setPage(0);
+    setSelectedCategory(null);
+  };
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-4">
@@ -69,6 +83,17 @@ export default function Bonus() {
           <h1 className="text-2xl font-bold text-gray-900">Bonus aanbiedingen</h1>
           <p className="text-gray-500 text-sm">Huidige weekaanbiedingen van Albert Heijn</p>
         </div>
+      </div>
+
+      {/* Search bar */}
+      <div className="mb-5">
+        <SearchBar
+          placeholder="Zoek in bonus aanbiedingen (bijv. melk, vlees, kaas...)"
+          onSearch={handleSearch}
+          onClear={handleClear}
+          loading={isLoading}
+          activeQuery={searchQuery || undefined}
+        />
       </div>
 
       {isLoading ? (
@@ -81,27 +106,26 @@ export default function Bonus() {
       ) : !data?.products.length ? (
         <div className="text-center py-16 text-gray-400">
           <p className="text-4xl mb-3">🏷️</p>
-          <p>Geen bonus aanbiedingen gevonden</p>
+          <p>{searchQuery ? `Geen bonusproducten gevonden voor "${searchQuery}"` : 'Geen bonus aanbiedingen gevonden'}</p>
         </div>
       ) : (
         <>
           {/* Stats */}
           <div className="mb-4">
             <p className="text-sm text-gray-500 mb-3">
-              {data.page.totalElements.toLocaleString('nl')} aanbiedingen deze week
+              {data.page.totalElements.toLocaleString('nl')} aanbiedingen
+              {searchQuery && ` voor "${searchQuery}"`}
               {selectedCategory && ` · ${filtered.length} in "${selectedCategory}"`}
-              {' · '}pagina {page + 1} van {totalPages}
+              {totalPages > 1 && !selectedCategory && ` · pagina ${page + 1} van ${totalPages}`}
             </p>
 
             {/* Category filters */}
-            {categories.length > 0 && (
+            {categories.length > 1 && (
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedCategory(null)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    !selectedCategory
-                      ? 'bg-ah-orange text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    !selectedCategory ? 'bg-ah-orange text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
                   Alle categorieën ({data.products.length})
@@ -140,17 +164,15 @@ export default function Bonus() {
           {totalPages > 1 && !selectedCategory && (
             <div className="flex items-center justify-center gap-3">
               <button
-                onClick={() => { setPage((p) => p - 1); setSelectedCategory(null); window.scrollTo(0, 0); }}
+                onClick={() => { setPage((p) => p - 1); window.scrollTo(0, 0); }}
                 disabled={page === 0}
                 className="btn-secondary disabled:opacity-40"
               >
                 ← Vorige
               </button>
-              <span className="text-sm text-gray-600">
-                {page + 1} / {totalPages}
-              </span>
+              <span className="text-sm text-gray-600">{page + 1} / {totalPages}</span>
               <button
-                onClick={() => { setPage((p) => p + 1); setSelectedCategory(null); window.scrollTo(0, 0); }}
+                onClick={() => { setPage((p) => p + 1); window.scrollTo(0, 0); }}
                 disabled={page >= totalPages - 1}
                 className="btn-secondary disabled:opacity-40"
               >
