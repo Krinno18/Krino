@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
 import recipeRoutes from './routes/recipes.js';
 import listRoutes from './routes/lists.js';
+import axios from 'axios';
 import { getAnonymousToken } from './services/ahAuth.js';
 import './db/database.js';
 
@@ -47,6 +48,23 @@ app.use('/api/recipes', recipeRoutes);
 app.use('/api/lists', listRoutes);
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
+
+app.get('/api/debug/ah-search', async (_, res) => {
+  try {
+    const token = await getAnonymousToken();
+    const response = await axios.get('https://api.ah.nl/mobile-services/product/search/v2', {
+      params: { query: 'brood', page: 0, size: 3 },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'User-Agent': 'Appie/8.22.3',
+        'X-Application': 'AHWEBSHOP',
+      },
+    });
+    res.json({ success: true, keys: Object.keys(response.data), sample: JSON.stringify(response.data).substring(0, 500) });
+  } catch (err: any) {
+    res.json({ success: false, message: err.message, ahStatus: err.response?.status, ahData: err.response?.data });
+  }
+});
 
 app.get('/api/debug/ah-token', async (_, res) => {
   try {
