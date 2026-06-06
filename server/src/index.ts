@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
 import recipeRoutes from './routes/recipes.js';
 import listRoutes from './routes/lists.js';
+import { getAnonymousToken } from './services/ahAuth.js';
 import './db/database.js';
 
 const app = express();
@@ -46,6 +47,20 @@ app.use('/api/recipes', recipeRoutes);
 app.use('/api/lists', listRoutes);
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
+
+app.get('/api/debug/ah-token', async (_, res) => {
+  try {
+    const token = await getAnonymousToken();
+    res.json({ success: true, token: token.substring(0, 30) + '...' });
+  } catch (err: any) {
+    res.json({
+      success: false,
+      message: err.message,
+      ahStatus: err.response?.status,
+      ahData: err.response?.data,
+    });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Krino server draait op http://localhost:${PORT}`);
