@@ -49,6 +49,33 @@ app.use('/api/lists', listRoutes);
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
+app.get('/api/debug/ah-bonus', async (_, res) => {
+  const params = [
+    { sortOn: 'OFFERS', size: 3 },
+    { sortOn: 'OFFERS', size: 3, taxonomyId: 'bonus' },
+    { query: '*', sortOn: 'OFFERS', size: 3 },
+    { bonus: true, size: 3 },
+  ];
+  const results: any[] = [];
+  try {
+    const token = await getAnonymousToken();
+    for (const p of params) {
+      try {
+        const r = await axios.get('https://api.ah.nl/mobile-services/product/search/v2', {
+          params: p,
+          headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'Appie/8.22.3', 'X-Application': 'AHWEBSHOP' },
+        });
+        results.push({ params: p, ok: true, total: r.data.page?.totalElements, firstTitle: r.data.products?.[0]?.title });
+      } catch (e: any) {
+        results.push({ params: p, ok: false, status: e.response?.status });
+      }
+    }
+    res.json(results);
+  } catch (err: any) {
+    res.json({ error: err.message });
+  }
+});
+
 app.get('/api/debug/ah-product-full', async (_, res) => {
   try {
     const token = await getAnonymousToken();

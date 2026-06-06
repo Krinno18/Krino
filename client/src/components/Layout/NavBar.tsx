@@ -6,6 +6,7 @@ const navItems = [
   { to: '/lists', label: 'Boodschappenlijsten', icon: '📋' },
   { to: '/recipes', label: 'Recepten', icon: '🍳' },
   { to: '/products', label: 'Producten', icon: '🛒' },
+  { to: '/bonus', label: 'Bonus', icon: '🏷️' },
 ];
 
 export default function NavBar() {

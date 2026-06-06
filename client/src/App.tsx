@@ -8,6 +8,7 @@ import GroceryListDetail from './pages/GroceryListDetail';
 import Recipes from './pages/Recipes';
 import RecipeDetail from './pages/RecipeDetail';
 import Products from './pages/Products';
+import Bonus from './pages/Bonus';
 import { useAuthStore } from './store/authStore';
 
 const queryClient = new QueryClient({
@@ -35,6 +36,7 @@ function AppRoutes() {
         <Route path="/recipes" element={<Recipes />} />
         <Route path="/recipes/:id" element={<RecipeDetail />} />
         <Route path="/products" element={<Products />} />
+        <Route path="/bonus" element={<Bonus />} />
       </Route>
     </Routes>
   );
