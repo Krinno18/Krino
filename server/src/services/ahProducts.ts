@@ -95,18 +95,18 @@ export async function searchProducts(query: string, page = 0, size = 20, userTok
 }
 
 export async function getBonusProducts(page = 0, size = 50, userToken?: string) {
-  // taxonomyId: 'bonus' targets the weekly AH bonus folder (~400 products)
+  // taxonomyId: 'bonus' targets the weekly AH bonus folder
   // Fallback to bonus:true if taxonomy returns nothing
   try {
     const result = await fetchProducts(
-      { taxonomyId: 'bonus', sortOn: 'OFFERS', page, size },
+      { taxonomyId: 'bonus', page, size },
       userToken,
       true
     );
     if (result.products.length > 0) return result;
   } catch { /* fall through */ }
 
-  return fetchProducts({ bonus: true, sortOn: 'OFFERS', page, size }, userToken, true);
+  return fetchProducts({ bonus: true, page, size }, userToken, true);
 }
 
 export async function getProduct(productId: number, userToken?: string): Promise<AHProduct> {
