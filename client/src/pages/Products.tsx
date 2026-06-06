@@ -37,6 +37,19 @@ export default function Products() {
     },
   });
 
+  const createAndAddMutation = useMutation({
+    mutationFn: async ({ name, product }: { name: string; product: AHProduct }) => {
+      const list = await listsApi.create(name);
+      await listsApi.addItem(list.id, { name: product.title, quantity: 1, ah_product_id: product.id });
+      return list;
+    },
+    onSuccess: (list) => {
+      qc.invalidateQueries({ queryKey: ['lists'] });
+      setToast(`Toegevoegd aan nieuwe lijst "${list.name}"`);
+      setTimeout(() => setToast(''), 2500);
+    },
+  });
+
   const categories = useMemo(() => {
     if (!searchData?.products) return [];
     const cats = new Map<string, number>();
@@ -141,6 +154,7 @@ export default function Products() {
                 product={product}
                 lists={lists}
                 onAddToList={(listId, prod) => addMutation.mutate({ listId, product: prod })}
+                onCreateAndAdd={(name, prod) => createAndAddMutation.mutate({ name, product: prod })}
               />
             ))}
           </div>

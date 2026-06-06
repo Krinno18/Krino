@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listsApi } from '../api/lists';
 import { TemplateItem } from '../types';
 import GroceryListCard from '../components/GroceryList/GroceryListCard';
+import ProductAutocomplete from '../components/GroceryList/ProductAutocomplete';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 type CreateMode = 'leeg' | 'template' | 'kopie';
@@ -169,11 +170,11 @@ export default function GroceryLists() {
               onSubmit={(e) => { e.preventDefault(); if (tmplName.trim()) addTmplMutation.mutate(); }}
               className="flex gap-2 mb-4"
             >
-              <input
-                className="input flex-1 text-sm"
-                placeholder="Item (bijv. Melk, Eieren...)"
+              <ProductAutocomplete
                 value={tmplName}
-                onChange={(e) => setTmplName(e.target.value)}
+                onChange={(name) => setTmplName(name)}
+                placeholder="Zoek of typ product (bijv. Melk, Eieren...)"
+                className="input w-full text-sm"
               />
               <input
                 className="input w-14 text-center text-sm"

@@ -35,6 +35,15 @@ export default function Bonus() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['lists'] }),
   });
 
+  const createAndAddMutation = useMutation({
+    mutationFn: async ({ name, product }: { name: string; product: AHProduct }) => {
+      const list = await listsApi.create(name);
+      await listsApi.addItem(list.id, { name: product.title, quantity: 1, ah_product_id: product.id });
+      return list;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['lists'] }),
+  });
+
   const categories = useMemo(() => {
     if (!data?.products) return [];
     const cats = new Map<string, number>();
@@ -122,6 +131,7 @@ export default function Bonus() {
                 product={product}
                 lists={lists}
                 onAddToList={(listId, prod) => addMutation.mutate({ listId, product: prod })}
+                onCreateAndAdd={(name, prod) => createAndAddMutation.mutate({ name, product: prod })}
               />
             ))}
           </div>
