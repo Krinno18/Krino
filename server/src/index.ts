@@ -12,7 +12,20 @@ const app = express();
 const PORT = process.env.PORT ?? 3001;
 const CLIENT_URL = process.env.CLIENT_URL ?? 'http://localhost:5173';
 
-app.use(cors({ origin: CLIENT_URL, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const allowed = [
+      CLIENT_URL,
+      /^https:\/\/krino-client.*\.vercel\.app$/,
+    ];
+    const ok = allowed.some((p) =>
+      typeof p === 'string' ? p === origin : p.test(origin)
+    );
+    callback(ok ? null : new Error('CORS geblokkeerd'), ok);
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(
   session({

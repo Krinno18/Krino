@@ -18,7 +18,13 @@ export async function getAnonymousToken(): Promise<string> {
   const response = await axios.post<AHTokens>(
     'https://api.ah.nl/mobile-auth/v1/auth/token/anonymous',
     { clientId: AH_CLIENT_ID },
-    { headers: { 'Content-Type': 'application/json' } }
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Appie/8.22.3',
+        'X-Application': 'AHWEBSHOP',
+      },
+    }
   );
 
   const { access_token, expires_in } = response.data;
