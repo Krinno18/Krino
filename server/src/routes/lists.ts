@@ -17,6 +17,32 @@ function listWithItems(listId: number): GroceryList | undefined {
   return { ...list, items: db.getItems(listId) };
 }
 
+// --- Template routes (must be defined before /:id routes) ---
+
+router.get('/template', (_req: Request, res: Response) => {
+  res.json(db.getTemplateItems());
+});
+
+router.post('/template/items', (req: Request, res: Response) => {
+  const { name, quantity = 1, unit } = req.body;
+  if (!name?.trim()) { res.status(400).json({ error: 'Naam vereist' }); return; }
+  const item = db.addTemplateItem(name.trim(), Number(quantity) || 1, unit?.trim() || undefined);
+  res.status(201).json(item);
+});
+
+router.delete('/template/items', (_req: Request, res: Response) => {
+  db.clearTemplateItems();
+  res.status(204).send();
+});
+
+router.delete('/template/items/:id', (req: Request, res: Response) => {
+  const ok = db.removeTemplateItem(Number(req.params.id));
+  if (!ok) { res.status(404).json({ error: 'Item niet gevonden' }); return; }
+  res.status(204).send();
+});
+
+// --- List CRUD ---
+
 router.get('/', (_req: Request, res: Response) => {
   const lists = db.getAllLists().map((l) => ({ ...l, items: db.getItems(l.id) }));
   res.json(lists);
@@ -29,10 +55,21 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 router.post('/', (req: Request, res: Response) => {
-  const { name } = req.body;
+  const { name, fromTemplate, copyFromId } = req.body;
   if (!name?.trim()) { res.status(400).json({ error: 'Naam vereist' }); return; }
-  const list = db.createList(name.trim());
-  res.status(201).json({ ...list, items: [] });
+
+  let list;
+  if (fromTemplate) {
+    list = db.createListFromTemplate(name.trim());
+  } else {
+    list = db.createList(name.trim());
+  }
+
+  if (copyFromId && Number(copyFromId) !== list.id) {
+    db.copyItemsToList(list.id, Number(copyFromId));
+  }
+
+  res.status(201).json(listWithItems(list.id));
 });
 
 router.put('/:id', (req: Request, res: Response) => {
@@ -49,27 +86,30 @@ router.delete('/:id', (req: Request, res: Response) => {
   res.status(204).send();
 });
 
+// --- Items ---
+
 router.post('/:id/items', (req: Request, res: Response) => {
+  const listId = Number(req.params.id);
   const { name, quantity = 1, unit, ah_product_id } = req.body;
   if (!name?.trim()) { res.status(400).json({ error: 'Naam vereist' }); return; }
-  if (!db.getList(Number(req.params.id))) { res.status(404).json({ error: 'Lijst niet gevonden' }); return; }
-  const item = db.addItem(Number(req.params.id), name.trim(), quantity, unit, ah_product_id);
+  if (!db.getList(listId)) { res.status(404).json({ error: 'Lijst niet gevonden' }); return; }
+  const item = db.addItem(listId, name.trim(), Number(quantity) || 1, unit?.trim() || undefined, ah_product_id);
   res.status(201).json(item);
 });
 
 router.post('/:id/items/bulk', (req: Request, res: Response) => {
+  const listId = Number(req.params.id);
   const { items } = req.body as {
     items: Array<{ name: string; quantity?: number; unit?: string; ah_product_id?: number }>;
   };
   if (!Array.isArray(items) || items.length === 0) { res.status(400).json({ error: 'Items vereist' }); return; }
-  if (!db.getList(Number(req.params.id))) { res.status(404).json({ error: 'Lijst niet gevonden' }); return; }
-
+  if (!db.getList(listId)) { res.status(404).json({ error: 'Lijst niet gevonden' }); return; }
   for (const item of items) {
     if (item.name?.trim()) {
-      db.addItem(Number(req.params.id), item.name.trim(), item.quantity ?? 1, item.unit, item.ah_product_id);
+      db.addItem(listId, item.name.trim(), item.quantity ?? 1, item.unit?.trim() || undefined, item.ah_product_id);
     }
   }
-  res.status(201).json(listWithItems(Number(req.params.id)));
+  res.status(201).json(listWithItems(listId));
 });
 
 router.put('/:id/items/:itemId', (req: Request, res: Response) => {
@@ -80,11 +120,32 @@ router.put('/:id/items/:itemId', (req: Request, res: Response) => {
   res.json(item);
 });
 
+router.delete('/:id/items/checked', (req: Request, res: Response) => {
+  const listId = Number(req.params.id);
+  if (!db.getList(listId)) { res.status(404).json({ error: 'Lijst niet gevonden' }); return; }
+  const removed = db.deleteCheckedItems(listId);
+  res.json({ removed, list: listWithItems(listId) });
+});
+
 router.delete('/:id/items/:itemId', (req: Request, res: Response) => {
   const ok = db.deleteItem(Number(req.params.itemId), Number(req.params.id));
   if (!ok) { res.status(404).json({ error: 'Item niet gevonden' }); return; }
   res.status(204).send();
 });
+
+// --- Copy items from another list ---
+
+router.post('/:id/copy-from/:sourceId', (req: Request, res: Response) => {
+  const targetId = Number(req.params.id);
+  const sourceId = Number(req.params.sourceId);
+  if (!db.getList(targetId)) { res.status(404).json({ error: 'Doellijst niet gevonden' }); return; }
+  if (!db.getList(sourceId)) { res.status(404).json({ error: 'Bronlijst niet gevonden' }); return; }
+  const { itemIds } = req.body as { itemIds?: number[] };
+  const count = db.copyItemsToList(targetId, sourceId, itemIds);
+  res.json({ success: true, itemsCopied: count, list: listWithItems(targetId) });
+});
+
+// --- AH Sync ---
 
 router.post('/:id/sync', requireAHAuth, async (req: Request, res: Response) => {
   const list = listWithItems(Number(req.params.id));

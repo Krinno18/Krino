@@ -18,6 +18,13 @@ export interface GroceryListItem {
   created_at: string;
 }
 
+export interface TemplateItem {
+  id: number;
+  name: string;
+  quantity: number;
+  unit?: string;
+}
+
 export interface AHProduct {
   id: number;
   title: string;

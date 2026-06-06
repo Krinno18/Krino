@@ -17,11 +17,20 @@ export default function GroceryListDetail() {
   const [unit, setUnit] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
+  const [copySourceId, setCopySourceId] = useState<number | ''>('');
+  const [showCopyPanel, setShowCopyPanel] = useState(false);
 
   const { data: list, isLoading } = useQuery({
     queryKey: ['lists', listId],
     queryFn: () => listsApi.getById(listId),
   });
+
+  const { data: allLists = [] } = useQuery({
+    queryKey: ['lists'],
+    queryFn: listsApi.getAll,
+  });
+
+  const otherLists = allLists.filter((l) => l.id !== listId);
 
   const addItemMutation = useMutation({
     mutationFn: (item: { name: string; quantity: number; unit?: string }) =>
@@ -45,14 +54,24 @@ export default function GroceryListDetail() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['lists', listId] }),
   });
 
+  const deleteCheckedMutation = useMutation({
+    mutationFn: () => listsApi.deleteCheckedItems(listId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['lists', listId] }),
+  });
+
+  const copyFromMutation = useMutation({
+    mutationFn: (sourceId: number) => listsApi.copyFrom(listId, sourceId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['lists', listId] });
+      setCopySourceId('');
+      setShowCopyPanel(false);
+    },
+  });
+
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (newItem.trim()) {
-      addItemMutation.mutate({
-        name: newItem.trim(),
-        quantity: parseFloat(qty) || 1,
-        unit: unit.trim() || undefined,
-      });
+      addItemMutation.mutate({ name: newItem.trim(), quantity: parseFloat(qty) || 1, unit: unit.trim() || undefined });
     }
   };
 
@@ -75,11 +94,13 @@ export default function GroceryListDetail() {
 
   const unchecked = list.items.filter((i) => !i.checked);
   const checked = list.items.filter((i) => i.checked);
+  const progress = list.items.length > 0 ? Math.round((checked.length / list.items.length) * 100) : 0;
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-3 mb-6">
-        <Link to="/lists" className="text-gray-400 hover:text-gray-600">←</Link>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-2">
+        <Link to="/lists" className="text-gray-400 hover:text-gray-600 text-xl">←</Link>
         <h1 className="text-2xl font-bold text-gray-900 flex-1">{list.name}</h1>
         {loggedIn && (
           <button
@@ -92,13 +113,30 @@ export default function GroceryListDetail() {
         )}
       </div>
 
+      {/* Progress bar */}
+      {list.items.length > 0 && (
+        <div className="mb-4">
+          <div className="flex justify-between text-xs text-gray-400 mb-1">
+            <span>{unchecked.length} te gaan</span>
+            <span>{progress}% klaar</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-ah-blue rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {syncMsg && (
         <div className={`mb-4 p-3 rounded-lg text-sm ${syncMsg.includes('mislukt') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
           {syncMsg}
         </div>
       )}
 
-      <form onSubmit={handleAddItem} className="card p-4 mb-6 flex flex-col gap-3">
+      {/* Add item form */}
+      <form onSubmit={handleAddItem} className="card p-4 mb-4 flex flex-col gap-3">
         <h2 className="font-semibold text-gray-700 text-sm">Item toevoegen</h2>
         <div className="flex gap-2">
           <input
@@ -133,6 +171,44 @@ export default function GroceryListDetail() {
         </div>
       </form>
 
+      {/* Copy from another list */}
+      {otherLists.length > 0 && (
+        <div className="mb-4">
+          <button
+            onClick={() => setShowCopyPanel((v) => !v)}
+            className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800"
+          >
+            <span className={`transition-transform ${showCopyPanel ? 'rotate-90' : ''}`}>▶</span>
+            📋 Items kopiëren van andere lijst
+          </button>
+
+          {showCopyPanel && (
+            <div className="card p-3 mt-2 flex gap-2">
+              <select
+                className="input flex-1 text-sm"
+                value={copySourceId}
+                onChange={(e) => setCopySourceId(Number(e.target.value) || '')}
+              >
+                <option value="">Kies een lijst...</option>
+                {otherLists.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name} ({l.items.length} items)
+                  </option>
+                ))}
+              </select>
+              <button
+                className="btn-primary text-sm whitespace-nowrap"
+                disabled={!copySourceId || copyFromMutation.isPending}
+                onClick={() => copySourceId && copyFromMutation.mutate(Number(copySourceId))}
+              >
+                {copyFromMutation.isPending ? 'Bezig...' : 'Kopieer alles'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* List items */}
       {list.items.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <p className="text-4xl mb-3">🛒</p>
@@ -154,8 +230,19 @@ export default function GroceryListDetail() {
 
           {checked.length > 0 && (
             <>
-              <div className="px-3 py-2 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                Afgevinkt ({checked.length})
+              <div className="px-3 py-2 flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                  Afgevinkt ({checked.length})
+                </span>
+                <button
+                  onClick={() => {
+                    if (confirm(`${checked.length} afgevinkte items verwijderen?`))
+                      deleteCheckedMutation.mutate();
+                  }}
+                  className="text-xs text-red-400 hover:text-red-600"
+                >
+                  Verwijder afgevinkte
+                </button>
               </div>
               {checked.map((item) => (
                 <GroceryListItemRow

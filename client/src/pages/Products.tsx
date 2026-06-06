@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsApi } from '../api/products';
 import { listsApi } from '../api/lists';
@@ -7,24 +7,18 @@ import SearchBar from '../components/common/SearchBar';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { AHProduct } from '../types';
 
-type Tab = 'zoeken' | 'bonus';
+const QUICK_SEARCHES = ['melk', 'brood', 'kaas', 'kip', 'pasta', 'groente', 'fruit', 'yoghurt'];
 
 export default function Products() {
-  const [tab, setTab] = useState<Tab>('zoeken');
   const [query, setQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [toast, setToast] = useState('');
   const qc = useQueryClient();
 
   const { data: searchData, isLoading: searchLoading } = useQuery({
     queryKey: ['products', query],
-    queryFn: () => productsApi.search(query),
-    enabled: !!query && tab === 'zoeken',
-  });
-
-  const { data: bonusData, isLoading: bonusLoading } = useQuery({
-    queryKey: ['products-bonus'],
-    queryFn: () => productsApi.getBonus(),
-    enabled: tab === 'bonus',
+    queryFn: () => productsApi.search(query, 0, 40),
+    enabled: !!query,
   });
 
   const { data: lists = [] } = useQuery({
@@ -43,74 +37,103 @@ export default function Products() {
     },
   });
 
-  const products = tab === 'bonus' ? bonusData?.products : searchData?.products;
-  const isLoading = tab === 'bonus' ? bonusLoading : searchLoading;
+  const categories = useMemo(() => {
+    if (!searchData?.products) return [];
+    const cats = new Map<string, number>();
+    for (const p of searchData.products) {
+      if (p.category) cats.set(p.category, (cats.get(p.category) ?? 0) + 1);
+    }
+    return [...cats.entries()].sort((a, b) => b[1] - a[1]).map(([cat, count]) => ({ cat, count }));
+  }, [searchData?.products]);
+
+  const filtered = useMemo(() => {
+    if (!searchData?.products) return [];
+    if (!selectedCategory) return searchData.products;
+    return searchData.products.filter((p) => p.category === selectedCategory);
+  }, [searchData?.products, selectedCategory]);
+
+  const handleSearch = (q: string) => {
+    setQuery(q);
+    setSelectedCategory(null);
+  };
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">Producten</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-4">Producten zoeken</h1>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setTab('zoeken')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === 'zoeken' ? 'bg-ah-blue text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-          }`}
-        >
-          🔍 Zoeken
-        </button>
-        <button
-          onClick={() => setTab('bonus')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === 'bonus' ? 'bg-ah-orange text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-          }`}
-        >
-          🏷️ Bonus aanbiedingen
-        </button>
+      <div className="mb-5">
+        <SearchBar
+          placeholder="Zoek product (bijv. melk, brood, pasta...)"
+          onSearch={handleSearch}
+          loading={searchLoading}
+        />
+        {!query && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {QUICK_SEARCHES.map((s) => (
+              <button
+                key={s}
+                onClick={() => handleSearch(s)}
+                className="text-xs px-3 py-1 rounded-full bg-gray-100 hover:bg-ah-blue hover:text-white transition-colors capitalize"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-
-      {tab === 'zoeken' && (
-        <div className="mb-6">
-          <SearchBar
-            placeholder="Zoek product (bijv. melk, brood, pasta...)"
-            onSearch={setQuery}
-            loading={searchLoading}
-          />
-        </div>
-      )}
 
       {toast && (
         <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm">{toast}</div>
       )}
 
-      {tab === 'zoeken' && !query ? (
+      {!query ? (
         <div className="text-center py-16 text-gray-400">
-          <p className="text-4xl mb-3">🛒</p>
-          <p>Zoek een product, of bekijk de <button onClick={() => setTab('bonus')} className="text-ah-orange underline">bonus aanbiedingen</button></p>
+          <p className="text-4xl mb-3">🔍</p>
+          <p>Zoek een product om te beginnen</p>
         </div>
-      ) : isLoading ? (
-        <LoadingSpinner text={tab === 'bonus' ? 'Bonus aanbiedingen laden...' : 'Producten zoeken...'} />
-      ) : !products?.length ? (
-        <div className="text-center py-16 text-gray-400">Geen producten gevonden</div>
+      ) : searchLoading ? (
+        <LoadingSpinner text="Producten zoeken..." />
+      ) : !searchData?.products.length ? (
+        <div className="text-center py-16 text-gray-400">Geen producten gevonden voor "{query}"</div>
       ) : (
         <>
-          {tab === 'bonus' && (
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-2xl">🏷️</span>
-              <div>
-                <h2 className="font-semibold text-gray-900">Deze week in de bonus</h2>
-                <p className="text-sm text-gray-500">{bonusData?.page.totalElements} aanbiedingen</p>
-              </div>
-            </div>
-          )}
-          {tab === 'zoeken' && (
-            <p className="text-sm text-gray-500 mb-4">
-              {searchData?.page.totalElements} producten gevonden voor "{query}"
+          <div className="mb-4">
+            <p className="text-sm text-gray-500 mb-3">
+              {searchData.page.totalElements} producten gevonden voor "{query}"
+              {selectedCategory && ` · ${filtered.length} in "${selectedCategory}"`}
             </p>
-          )}
+
+            {categories.length > 1 && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    !selectedCategory
+                      ? 'bg-ah-blue text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Alles ({searchData.products.length})
+                </button>
+                {categories.map(({ cat, count }) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                      selectedCategory === cat
+                        ? 'bg-ah-blue text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {cat} <span className="opacity-70">({count})</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {products.map((product) => (
+            {filtered.map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}

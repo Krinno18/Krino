@@ -1,13 +1,21 @@
 import { GroceryList, GroceryListItem } from '../types.js';
 
-// In-memory database — werkt in alle omgevingen zonder native modules
 interface StoredList extends Omit<GroceryList, 'items'> {}
+
+export interface TemplateItem {
+  id: number;
+  name: string;
+  quantity: number;
+  unit?: string;
+}
 
 const store = {
   lists: [] as StoredList[],
   items: [] as GroceryListItem[],
+  templateItems: [] as TemplateItem[],
   listIdCounter: 1,
   itemIdCounter: 1,
+  templateItemIdCounter: 1,
 };
 
 function now() {
@@ -61,13 +69,7 @@ export const db = {
     return true;
   },
 
-  addItem(
-    listId: number,
-    name: string,
-    quantity: number,
-    unit?: string,
-    ahProductId?: number
-  ): GroceryListItem {
+  addItem(listId: number, name: string, quantity: number, unit?: string, ahProductId?: number): GroceryListItem {
     const item: GroceryListItem = {
       id: store.itemIdCounter++,
       list_id: listId,
@@ -101,9 +103,61 @@ export const db = {
     return true;
   },
 
+  deleteCheckedItems(listId: number): number {
+    const before = store.items.length;
+    store.items = store.items.filter((i) => !(i.list_id === listId && i.checked));
+    const removed = before - store.items.length;
+    if (removed > 0) this.touchList(listId);
+    return removed;
+  },
+
   touchList(listId: number): void {
     const list = store.lists.find((l) => l.id === listId);
     if (list) list.updated_at = now();
+  },
+
+  // Template methods
+  getTemplateItems(): TemplateItem[] {
+    return [...store.templateItems].sort((a, b) => a.id - b.id);
+  },
+
+  addTemplateItem(name: string, quantity: number, unit?: string): TemplateItem {
+    const item: TemplateItem = {
+      id: store.templateItemIdCounter++,
+      name,
+      quantity,
+      unit,
+    };
+    store.templateItems.push(item);
+    return item;
+  },
+
+  removeTemplateItem(id: number): boolean {
+    const idx = store.templateItems.findIndex((i) => i.id === id);
+    if (idx === -1) return false;
+    store.templateItems.splice(idx, 1);
+    return true;
+  },
+
+  clearTemplateItems(): void {
+    store.templateItems = [];
+  },
+
+  createListFromTemplate(name: string): StoredList {
+    const list = this.createList(name);
+    for (const ti of store.templateItems) {
+      this.addItem(list.id, ti.name, ti.quantity, ti.unit);
+    }
+    return list;
+  },
+
+  copyItemsToList(targetListId: number, sourceListId: number, itemIds?: number[]): number {
+    const sourceItems = this.getItems(sourceListId);
+    const toCopy = itemIds?.length ? sourceItems.filter((i) => itemIds.includes(i.id)) : sourceItems;
+    for (const item of toCopy) {
+      this.addItem(targetListId, item.name, item.quantity, item.unit, item.ah_product_id);
+    }
+    return toCopy.length;
   },
 };
 
