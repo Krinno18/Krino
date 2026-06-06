@@ -45,12 +45,12 @@ export default function NavBar() {
               Uitloggen
             </button>
           ) : (
-            <a
-              href="/api/auth/login"
+            <button
+              onClick={() => alert('AH-login werkt alleen bij een echte deployment (niet in StackBlitz). Je kunt alle andere functies gewoon gebruiken zonder in te loggen!')}
               className="btn-primary text-sm py-1.5"
             >
               Inloggen bij AH
-            </a>
+            </button>
           )}
         </div>
       </div>

@@ -51,9 +51,12 @@ export default function Home() {
           <p className="text-gray-700 mb-3">
             Log in met je Albert Heijn account om lijsten te synchroniseren met de AH app.
           </p>
-          <a href="/api/auth/login" className="btn-primary inline-block">
+          <button
+            onClick={() => alert('AH-login werkt alleen bij een echte deployment. Alle andere functies (lijsten, recepten, producten zoeken) werken zonder login!')}
+            className="btn-primary inline-block"
+          >
             Inloggen bij Albert Heijn
-          </a>
+          </button>
         </div>
       )}
     </div>
