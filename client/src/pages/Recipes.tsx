@@ -27,7 +27,9 @@ export default function Recipes() {
         <SearchBar
           placeholder="Zoek recept (bijv. pasta, soep, kip...)"
           onSearch={setQuery}
+          onClear={() => setQuery('')}
           loading={isLoading || isFetching}
+          activeQuery={query || undefined}
         />
         <div className="flex flex-wrap gap-2 mt-3">
           {SUGGESTED.map((s) => (

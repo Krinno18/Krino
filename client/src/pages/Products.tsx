@@ -65,7 +65,9 @@ export default function Products() {
         <SearchBar
           placeholder="Zoek product (bijv. melk, brood, pasta...)"
           onSearch={handleSearch}
+          onClear={() => { setQuery(''); setSelectedCategory(null); }}
           loading={searchLoading}
+          activeQuery={query || undefined}
         />
         {!query && (
           <div className="flex flex-wrap gap-2 mt-3">
