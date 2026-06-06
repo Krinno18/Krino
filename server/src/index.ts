@@ -90,35 +90,51 @@ app.get('/api/debug/ah-product-full', async (_, res) => {
 });
 
 app.get('/api/debug/ah-recipes', async (_, res) => {
-  const endpoints = [
-    'https://api.ah.nl/gatekeeper/recipe/v1/recipe-suggestions',
-    'https://api.ah.nl/mobile-services/recipe/v2/recipe-suggestions',
-    'https://api.ah.nl/gatekeeper/recipe/v2/recipe-suggestions',
-    'https://api.ah.nl/mobile-services/v1/recipe/search',
-    'https://api.ah.nl/mobile-services/recipe/v1/search',
-    'https://api.ah.nl/allerhande/recipe/v1/recipes',
-    'https://api.ah.nl/gatekeeper/recipe/v1/recipes',
-    'https://api.ah.nl/mobile-services/v1/recipes',
-    'https://api.ah.nl/mobile-services/recipe/search/v1',
-    'https://api.ah.nl/mobile-services/recipe/search/v2',
-    'https://api.ah.nl/mobile-services/recipe/v1/recipe-suggestions',
-    'https://api.ah.nl/mobile-services/v2/recipe/search',
-    'https://api.ah.nl/mobile-services/v1/recipe-suggestions',
-  ];
   const results: Record<string, any> = {};
   try {
     const token = await getAnonymousToken();
-    for (const url of endpoints) {
+
+    // Test 1: api.ah.nl endpoints with various params
+    const apiEndpoints = [
+      { url: 'https://api.ah.nl/gatekeeper/recipe/v1/recipe-suggestions', params: { query: 'pasta', size: 1 } },
+      { url: 'https://api.ah.nl/mobile-services/recipe/v1/recipe-suggestions', params: { query: 'pasta', size: 1 } },
+      { url: 'https://api.ah.nl/gatekeeper/recipe/v1/recipes', params: { query: 'pasta', size: 1 } },
+      { url: 'https://api.ah.nl/mobile-services/v1/recipe/search', params: { query: 'pasta', size: 1 } },
+      { url: 'https://api.ah.nl/mobile-services/recipe/search/v2', params: { query: 'pasta', size: 1 } },
+      { url: 'https://api.ah.nl/gatekeeper/recipe/v1/recipe-suggestions', params: { term: 'pasta', size: 1 } },
+    ];
+    for (const ep of apiEndpoints) {
       try {
-        const r = await axios.get(url, {
-          params: { query: 'pasta', size: 1 },
+        const r = await axios.get(ep.url, {
+          params: ep.params,
           headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'Appie/8.22.3', 'X-Application': 'AHWEBSHOP' },
         });
-        results[url] = { ok: true, keys: Object.keys(r.data), sample: JSON.stringify(r.data).substring(0, 400) };
+        results[`${ep.url}?${JSON.stringify(ep.params)}`] = { ok: true, keys: Object.keys(r.data), sample: JSON.stringify(r.data).substring(0, 400) };
       } catch (e: any) {
-        results[url] = { ok: false, status: e.response?.status, error: e.message };
+        results[`${ep.url}?${JSON.stringify(ep.params)}`] = { ok: false, status: e.response?.status };
       }
     }
+
+    // Test 2: AH website internal API (no auth)
+    const webEndpoints = [
+      { url: 'https://www.ah.nl/zoeken/api/products', params: { query: 'pasta', page: 0, size: 1, taxonomyId: 'recepten' } },
+      { url: 'https://www.ah.nl/allerhande/api/recipes', params: { query: 'pasta', size: 1 } },
+      { url: 'https://api.ah.nl/mobile-services/recipe/v1/recipes', params: { query: 'pasta', size: 1 } },
+      { url: 'https://api.ah.nl/mobile-services/v1/recipes/search', params: { query: 'pasta', size: 1 } },
+    ];
+    for (const ep of webEndpoints) {
+      try {
+        const r = await axios.get(ep.url, {
+          params: ep.params,
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible)', 'X-Application': 'AHWEBSHOP' },
+          timeout: 8000,
+        });
+        results[`WEB:${ep.url}`] = { ok: true, keys: Object.keys(r.data), sample: JSON.stringify(r.data).substring(0, 400) };
+      } catch (e: any) {
+        results[`WEB:${ep.url}`] = { ok: false, status: e.response?.status };
+      }
+    }
+
     res.json(results);
   } catch (err: any) {
     res.json({ error: err.message });
