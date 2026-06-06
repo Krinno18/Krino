@@ -95,18 +95,16 @@ export async function searchProducts(query: string, page = 0, size = 20, userTok
 }
 
 export async function getBonusProducts(page = 0, size = 50, userToken?: string) {
-  // taxonomyId: 'bonus' targets the weekly AH bonus folder
-  // Fallback to bonus:true if taxonomy returns nothing
-  try {
-    const result = await fetchProducts(
-      { taxonomyId: 'bonus', page, size },
-      userToken,
-      true
-    );
-    if (result.products.length > 0) return result;
-  } catch { /* fall through */ }
-
-  return fetchProducts({ bonus: true, page, size }, userToken, true);
+  const result = await fetchProducts({ bonus: true, page, size }, userToken, true);
+  // Filter to products with a visible deal (discount label or price difference)
+  // This removes generic "Prijsfavoriet" items without real weekly bonus deals
+  const withDeal = result.products.filter(
+    (p) => p.discountLabel || (p.price?.was !== undefined)
+  );
+  return {
+    products: withDeal.length > 0 ? withDeal : result.products,
+    page: result.page,
+  };
 }
 
 export async function getProduct(productId: number, userToken?: string): Promise<AHProduct> {

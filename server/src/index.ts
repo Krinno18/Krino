@@ -187,14 +187,27 @@ app.get('/api/debug/ah-bonus-compare', async (_, res) => {
   try {
     const token = await getAnonymousToken();
     const headers = { Authorization: `Bearer ${token}`, 'User-Agent': 'Appie/8.22.3', 'X-Application': 'AHWEBSHOP' };
-    const [taxonomy, bonusFlag] = await Promise.all([
-      axios.get('https://api.ah.nl/mobile-services/product/search/v2', { params: { taxonomyId: 'bonus', page: 0, size: 3 }, headers }),
-      axios.get('https://api.ah.nl/mobile-services/product/search/v2', { params: { bonus: true, page: 0, size: 3 }, headers }),
-    ]);
-    res.json({
-      taxonomy: { total: taxonomy.data.page?.totalElements, titles: taxonomy.data.products?.slice(0, 3).map((p: any) => p.title) },
-      bonusFlag: { total: bonusFlag.data.page?.totalElements, titles: bonusFlag.data.products?.slice(0, 3).map((p: any) => p.title) },
-    });
+    const params = [
+      { bonus: true, page: 0, size: 5 },
+      { bonus: true, page: 0, size: 5, isStapelBonus: false },
+    ];
+    const results: any[] = [];
+    for (const p of params) {
+      try {
+        const r = await axios.get('https://api.ah.nl/mobile-services/product/search/v2', { params: p, headers });
+        const products = r.data.products ?? [];
+        results.push({
+          params: p,
+          total: r.data.page?.totalElements,
+          withDiscountLabel: products.filter((x: any) => x.discountLabels?.length > 0).length,
+          withPriceDiff: products.filter((x: any) => x.priceBeforeBonus && x.currentPrice && x.currentPrice < x.priceBeforeBonus).length,
+          titles: products.slice(0, 3).map((x: any) => ({ title: x.title, discountLabel: x.discountLabels?.[0]?.defaultDescription, mechanism: x.bonusMechanism, isBonus: x.isBonus })),
+        });
+      } catch (e: any) {
+        results.push({ params: p, error: e.response?.status ?? e.message });
+      }
+    }
+    res.json(results);
   } catch (err: any) {
     res.json({ error: err.message });
   }
