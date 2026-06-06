@@ -10,6 +10,7 @@ export interface AHProduct {
   title: string;
   price?: {
     now: number;
+    was?: number;
     unitSize?: string;
   };
   images: Array<{ url: string }>;

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { searchProducts, getProduct } from '../services/ahProducts.js';
+import { searchProducts, getBonusProducts, getProduct } from '../services/ahProducts.js';
 
 const router = Router();
 
@@ -22,6 +22,17 @@ router.get('/search', async (req: Request, res: Response) => {
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: 'Producten zoeken mislukt', detail: err.message });
+  }
+});
+
+router.get('/bonus', async (req: Request, res: Response) => {
+  const { page = '0', size = '20' } = req.query;
+  try {
+    const userToken = req.session.ahTokens?.access_token;
+    const result = await getBonusProducts(Number(page), Number(size), userToken);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Bonus producten ophalen mislukt', detail: err.message });
   }
 });
 
