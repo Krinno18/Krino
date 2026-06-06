@@ -183,6 +183,23 @@ app.get('/api/debug/ah-bonus-raw', async (_, res) => {
   }
 });
 
+app.get('/api/debug/ah-bonus-compare', async (_, res) => {
+  try {
+    const token = await getAnonymousToken();
+    const headers = { Authorization: `Bearer ${token}`, 'User-Agent': 'Appie/8.22.3', 'X-Application': 'AHWEBSHOP' };
+    const [taxonomy, bonusFlag] = await Promise.all([
+      axios.get('https://api.ah.nl/mobile-services/product/search/v2', { params: { taxonomyId: 'bonus', sortOn: 'OFFERS', page: 0, size: 3 }, headers }),
+      axios.get('https://api.ah.nl/mobile-services/product/search/v2', { params: { bonus: true, sortOn: 'OFFERS', page: 0, size: 3 }, headers }),
+    ]);
+    res.json({
+      taxonomy: { total: taxonomy.data.page?.totalElements, titles: taxonomy.data.products?.slice(0, 3).map((p: any) => p.title) },
+      bonusFlag: { total: bonusFlag.data.page?.totalElements, titles: bonusFlag.data.products?.slice(0, 3).map((p: any) => p.title) },
+    });
+  } catch (err: any) {
+    res.json({ error: err.message });
+  }
+});
+
 app.get('/api/debug/ah-allerhande', async (req, res) => {
   try {
     const query = (req.query.q as string) ?? 'pasta';

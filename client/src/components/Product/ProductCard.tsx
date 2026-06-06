@@ -63,17 +63,18 @@ export default function ProductCard({ product, lists, onAddToList }: Props) {
             <span className="text-gray-400 text-[11px]">{product.price.unitSize}</span>
           )}
 
-          {product.discountLabel && (
-            <span className="inline-block mt-1 text-[10px] bg-ah-orange/10 text-ah-orange px-1.5 py-0.5 rounded font-medium">
-              {product.discountLabel}
-            </span>
-          )}
-
-          {product.category && (
-            <span className="inline-block mt-1 ml-1 text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
-              {product.category}
-            </span>
-          )}
+          <div className="flex flex-wrap gap-1 mt-1">
+            {product.discountLabel && (
+              <span className="text-[10px] bg-ah-orange text-white px-1.5 py-0.5 rounded font-bold">
+                {product.discountLabel}
+              </span>
+            )}
+            {product.category && (
+              <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                {product.category}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
