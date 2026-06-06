@@ -49,6 +49,45 @@ app.use('/api/lists', listRoutes);
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
+app.get('/api/debug/ah-product-full', async (_, res) => {
+  try {
+    const token = await getAnonymousToken();
+    const response = await axios.get('https://api.ah.nl/mobile-services/product/search/v2', {
+      params: { query: 'brood', page: 0, size: 1 },
+      headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'Appie/8.22.3', 'X-Application': 'AHWEBSHOP' },
+    });
+    res.json(response.data.products?.[0] ?? {});
+  } catch (err: any) {
+    res.json({ error: err.message, status: err.response?.status, data: err.response?.data });
+  }
+});
+
+app.get('/api/debug/ah-recipes', async (_, res) => {
+  const endpoints = [
+    'https://api.ah.nl/gatekeeper/recipe/v1/recipe-suggestions',
+    'https://api.ah.nl/mobile-services/recipe/v2/recipe-suggestions',
+    'https://api.ah.nl/gatekeeper/recipe/v2/recipe-suggestions',
+  ];
+  const results: Record<string, any> = {};
+  try {
+    const token = await getAnonymousToken();
+    for (const url of endpoints) {
+      try {
+        const r = await axios.get(url, {
+          params: { query: 'pasta', size: 1 },
+          headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'Appie/8.22.3', 'X-Application': 'AHWEBSHOP' },
+        });
+        results[url] = { ok: true, keys: Object.keys(r.data), sample: JSON.stringify(r.data).substring(0, 400) };
+      } catch (e: any) {
+        results[url] = { ok: false, status: e.response?.status, error: e.message };
+      }
+    }
+    res.json(results);
+  } catch (err: any) {
+    res.json({ error: err.message });
+  }
+});
+
 app.get('/api/debug/ah-search', async (_, res) => {
   try {
     const token = await getAnonymousToken();
