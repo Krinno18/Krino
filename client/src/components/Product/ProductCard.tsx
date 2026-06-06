@@ -19,16 +19,23 @@ export default function ProductCard({ product, lists, onAddToList }: Props) {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-900 leading-tight">{product.title}</p>
           {product.brand && <p className="text-xs text-gray-500">{product.brand}</p>}
-          {product.price && (
-            <p className="text-ah-blue font-semibold text-sm mt-1">
-              € {product.price.now.toFixed(2)}
-              {product.price.unitSize && (
-                <span className="text-gray-400 font-normal text-xs ml-1">
-                  / {product.price.unitSize}
-                </span>
-              )}
-            </p>
-          )}
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {product.price && product.price.now > 0 && (
+              <p className="text-ah-blue font-semibold text-sm">
+                € {product.price.now.toFixed(2)}
+                {product.price.unitSize && (
+                  <span className="text-gray-400 font-normal text-xs ml-1">
+                    {product.price.unitSize}
+                  </span>
+                )}
+              </p>
+            )}
+            {product.isBonus && product.discountLabel && (
+              <span className="text-xs bg-ah-orange/10 text-ah-orange px-1.5 py-0.5 rounded font-medium">
+                {product.discountLabel}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

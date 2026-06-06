@@ -22,6 +22,22 @@ function ahHeaders(token: string) {
   };
 }
 
+function mapProduct(p: any): AHProduct {
+  return {
+    id: p.webshopId ?? p.hqId,
+    title: p.title,
+    price: {
+      now: p.currentPrice ?? p.priceBeforeBonus ?? 0,
+      unitSize: p.salesUnitSize,
+    },
+    images: (p.images ?? []).map((img: any) => ({ url: img.url ?? img })),
+    brand: p.brand,
+    category: p.mainCategory,
+    isBonus: p.isBonus,
+    discountLabel: p.discountLabels?.[0]?.defaultDescription,
+  };
+}
+
 export async function searchProducts(
   query: string,
   page = 0,
@@ -36,7 +52,7 @@ export async function searchProducts(
   });
 
   return {
-    products: response.data.products ?? [],
+    products: (response.data.products ?? []).map(mapProduct),
     page: response.data.page ?? { totalElements: 0, totalPages: 0, number: 0, size },
   };
 }
@@ -49,5 +65,5 @@ export async function getProduct(productId: number, userToken?: string): Promise
     { headers: ahHeaders(token) }
   );
 
-  return response.data.productCard;
+  return mapProduct(response.data.productCard ?? response.data);
 }

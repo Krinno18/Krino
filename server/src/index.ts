@@ -67,6 +67,11 @@ app.get('/api/debug/ah-recipes', async (_, res) => {
     'https://api.ah.nl/gatekeeper/recipe/v1/recipe-suggestions',
     'https://api.ah.nl/mobile-services/recipe/v2/recipe-suggestions',
     'https://api.ah.nl/gatekeeper/recipe/v2/recipe-suggestions',
+    'https://api.ah.nl/mobile-services/v1/recipe/search',
+    'https://api.ah.nl/mobile-services/recipe/v1/search',
+    'https://api.ah.nl/allerhande/recipe/v1/recipes',
+    'https://api.ah.nl/gatekeeper/recipe/v1/recipes',
+    'https://api.ah.nl/mobile-services/v1/recipes',
   ];
   const results: Record<string, any> = {};
   try {

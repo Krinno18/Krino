@@ -21,13 +21,15 @@ export interface GroceryListItem {
 export interface AHProduct {
   id: number;
   title: string;
-  price: {
+  price?: {
     now: number;
     unitSize?: string;
   };
   images: Array<{ url: string }>;
   category?: string;
   brand?: string;
+  isBonus?: boolean;
+  discountLabel?: string;
 }
 
 export interface AHRecipe {
