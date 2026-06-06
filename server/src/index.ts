@@ -8,6 +8,7 @@ import recipeRoutes from './routes/recipes.js';
 import listRoutes from './routes/lists.js';
 import axios from 'axios';
 import { getAnonymousToken } from './services/ahAuth.js';
+import { debugAllerhandeNextData } from './services/ahRecipes.js';
 import './db/database.js';
 
 const app = express();
@@ -169,6 +170,16 @@ app.get('/api/debug/ah-token', async (_, res) => {
       ahStatus: err.response?.status,
       ahData: err.response?.data,
     });
+  }
+});
+
+app.get('/api/debug/ah-allerhande', async (req, res) => {
+  try {
+    const query = (req.query.q as string) ?? 'pasta';
+    const data = await debugAllerhandeNextData(query);
+    res.json(data);
+  } catch (err: any) {
+    res.json({ error: err.message, status: err.response?.status });
   }
 });
 
