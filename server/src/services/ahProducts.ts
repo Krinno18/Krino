@@ -60,8 +60,8 @@ export async function searchProducts(query: string, page = 0, size = 20, userTok
   return fetchProducts({ query, page, size }, userToken);
 }
 
-export async function getBonusProducts(page = 0, size = 20, userToken?: string) {
-  return fetchProducts({ sortOn: 'OFFERS', page, size }, userToken);
+export async function getBonusProducts(page = 0, size = 40, userToken?: string) {
+  return fetchProducts({ bonus: true, page, size }, userToken);
 }
 
 export async function getProduct(productId: number, userToken?: string): Promise<AHProduct> {
